@@ -1,3 +1,4 @@
 Trigger the verified one-time source bootstrap.
 Retry after excluding the inherited CI workflow.
 Trigger repository checks for the published snapshot.
+Retry with the explicit source-only archive gate.
