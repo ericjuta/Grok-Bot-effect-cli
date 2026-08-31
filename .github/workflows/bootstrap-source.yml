@@ -46,6 +46,7 @@ jobs:
 
           rsync -a \
             --exclude='.git/' \
+            --exclude='.github/workflows/' \
             "$base_dir/" ./
           gzip --decompress --stdout "$patch_gz" \
             | git apply --binary --whitespace=nowarn
