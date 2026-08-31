@@ -20,6 +20,8 @@ jobs:
       - name: Install the locked dependency graph
         run: npm ci --no-audit --no-fund
       - name: Run source and publication checks
+        env:
+          GROK_BOT_SOURCE_ONLY: "1"
         run: npm run check
       - name: Build the editable frontend
         run: npm run frontend:build
