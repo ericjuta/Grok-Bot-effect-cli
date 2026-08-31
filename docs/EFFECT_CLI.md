@@ -402,7 +402,9 @@ Built-in request methods are:
 `grok.services.list` merges the compiled union descriptors with the current
 gateway manifest. Each descriptor carries `advertised: true/false` when live
 negotiation succeeds (or `null` when only the static 0.30 fallback is
-available), and `liveExtras` reports advertised methods newer than this client.
+available), plus a machine-readable `requiresHumanDecision` marker separate
+from risk and sensitivity. `liveExtras` reports advertised methods newer than
+this client.
 
 A known gateway method can also be used directly as the RPC method. Unknown
 names require `allowUnknown: true` on that individual request and must still
