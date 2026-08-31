@@ -321,6 +321,10 @@ test("stdio RPC is versioned, strict, and shuts down cleanly", async () => {
   assert.equal(services.result.liveDiscovery, true);
   assert.deepEqual(services.result.capabilities, ["gatewayServicesV1"]);
   assert.equal(services.result.services.find((item) => item.name === "listAgents").advertised, true);
+  assert.equal(
+    services.result.services.find((item) => item.name === "reactToMessage").requiresHumanDecision,
+    true,
+  );
   assert.deepEqual(services.result.liveExtras, []);
 
   frame({ type: "shutdown", id: "shutdown-1" });

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Grok Bot Operator"
+  short_description: "Operate Grok Bot CLI and MCP safely"

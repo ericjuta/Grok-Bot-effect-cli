@@ -156,12 +156,13 @@ test("MCP policy keeps reads available and human approvals behind a separate uns
     }));
     assert.ok(!writesAndSensitive.has("logoutMcpAccount"), "logout also requires the destructive gate");
 
-    const human = names(loaded.module.makeMcpTools({
+    const humanTools = loaded.module.makeMcpTools({
       includeWrites: true,
       includeDestructive: true,
       includeSensitive: true,
       includeHumanActions: true,
-    }));
+    });
+    const human = names(humanTools);
     assert.ok(human.has("resolveLocalToolPermission"));
     assert.ok(!human.has("refreshMcp"));
     assert.ok(!human.has("setHostSettings"));
@@ -174,6 +175,10 @@ test("MCP policy keeps reads available and human approvals behind a separate uns
     assert.ok(human.has("removeOwnAgentFromSharedRoom"));
     assert.ok(human.has("leaveSharedRoom"));
     assert.ok(human.has("nudgeVoiceCall"));
+    assert.match(
+      humanTools.find((tool) => tool.name === "reactToMessage").description,
+      /fresh human decision/i,
+    );
   } finally {
     await loaded.dispose();
   }
