@@ -54,6 +54,9 @@ not alter the user's global `PATH` or run `npm link` unless asked.
   [MCP and OMP](skill://grok-bot-operator/references/mcp-and-omp.md).
 - To choose among all 188 audited services, read the generated
   [service catalogue](skill://grok-bot-operator/references/service-catalog.md).
+- For recurring work, native trigger design, finite watches, webhooks, or a
+  TUI-owned watch/evaluate/act loop, switch to
+  [grok-bot-automations](skill://grok-bot-automations/SKILL.md).
 
 ## Preserve these invariants
 
