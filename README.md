@@ -64,11 +64,17 @@ npm run cli:build
 See [Effect CLI and oh-my-pi integration](docs/EFFECT_CLI.md) and the
 [0.30 service coverage audit](docs/SERVICE_COVERAGE_0.30.md).
 
-oh-my-pi also discovers the project-native
-[`grok-bot-operator`](.agents/skills/grok-bot-operator/SKILL.md) skill. It
-contains daily CLI/MCP/RPC recipes plus a generated, policy-aware index of all
-188 services. Start or restart oh-my-pi from this repository root after skill
-changes; `/skill:grok-bot-operator` loads it explicitly.
+oh-my-pi also discovers two project-native skills:
+
+- [`grok-bot-operator`](.agents/skills/grok-bot-operator/SKILL.md) for daily
+  CLI/MCP/RPC use and the generated, policy-aware index of all 188 services;
+- [`grok-bot-automations`](.agents/skills/grok-bot-automations/SKILL.md) for
+  schedules, native event listeners, stock webhooks, finite watches, and
+  persistent TUI-side conditional controllers.
+
+Start or restart oh-my-pi from this repository root after skill changes.
+`/skill:grok-bot-operator` and `/skill:grok-bot-automations` load them
+explicitly.
 
 ## What is in the repository?
 
