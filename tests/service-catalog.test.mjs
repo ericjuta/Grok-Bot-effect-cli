@@ -225,6 +225,7 @@ test("core, MCP, diagnostics, Cloud Agent, avatar, interrupt, and transcription 
       "readAttachmentText",
       "readAttachmentChunk",
       "getAgentNotificationAvatar",
+      "getAutomationWebhookCredential",
       "interruptAgentRun",
       "transcribeAudio",
     ];
@@ -236,6 +237,7 @@ test("core, MCP, diagnostics, Cloud Agent, avatar, interrupt, and transcription 
     assert.deepEqual(byName.get("sendPrompt").inputSchema.required, ["prompt", "agentId"]);
     assert.deepEqual(byName.get("createAgent").inputSchema.required, ["name", "description"]);
     assert.deepEqual(byName.get("refreshChannel").inputSchema.required, ["id", "platform"]);
+    assert.deepEqual(byName.get("getAutomationWebhookCredential").inputSchema.required, ["id", "automationId"]);
     assert.deepEqual(byName.get("installMcpEntry").inputSchema.required, ["entryId"]);
     assert.deepEqual(byName.get("replyToCloudAgent").inputSchema.required, ["bcId", "prompt"]);
     assert.match(byName.get("watchCloudAgent").description, /status snapshot/i);
@@ -255,6 +257,42 @@ test("core, MCP, diagnostics, Cloud Agent, avatar, interrupt, and transcription 
     assert.equal(stock030HostStatus.acceptsInput, true, "stock 0.30 accepts a getHostStatus options object");
     assert.equal(stock030HostStatus.inputSchema.type, "object");
     assert.equal(stock030HostStatus.inputSchema.additionalProperties, true);
+  } finally {
+    await loaded.dispose();
+  }
+});
+
+test("automation, workflow, import, and teach lifecycle contracts expose source-backed partial fields", async () => {
+  const loaded = await loadCatalog();
+  try {
+    const { GATEWAY_SERVICE_CATALOG } = loaded.module;
+    const byName = new Map(GATEWAY_SERVICE_CATALOG.map((service) => [service.name, service]));
+    const requiredFields = new Map([
+      ["setAgentAutomationEnabled", ["id", "automationId", "isEnabled"]],
+      ["runAgentAutomationNow", ["id", "automationId"]],
+      ["deleteAgentAutomation", ["id", "automationId"]],
+      ["setAgentWorkflowEnabled", ["id", "workflowId", "isEnabled"]],
+      ["runAgentWorkflowNow", ["id", "workflowId"]],
+      ["deleteAgentWorkflow", ["id", "workflowId"]],
+      ["importAgentWorkflowText", ["id", "markdown"]],
+      ["importAgentWorkflowUrl", ["id", "url"]],
+      ["startTeachRecording", ["agentId"]],
+      ["stopTeachRecording", ["agentId", "save"]],
+    ]);
+
+    for (const [name, required] of requiredFields) {
+      const service = byName.get(name);
+      assert.equal(service?.inputSchemaKind, "partial", `${name} must expose its evidenced fields`);
+      assert.equal(service.inputSchema.additionalProperties, true, `${name} must preserve stock extensibility`);
+      assert.deepEqual(service.inputSchema.required, required, `${name} required fields drifted`);
+    }
+
+    assert.equal(byName.get("setAgentAutomationEnabled").inputSchema.properties.isEnabled.type, "boolean");
+    assert.equal(byName.get("setAgentWorkflowEnabled").inputSchema.properties.isEnabled.type, "boolean");
+    assert.equal(byName.get("importAgentWorkflowText").inputSchema.properties.markdown.type, "string");
+    assert.equal(byName.get("importAgentWorkflowUrl").inputSchema.properties.url.type, "string");
+    assert.equal(byName.get("startTeachRecording").inputSchema.properties.entryPoint.type, "string");
+    assert.equal(byName.get("stopTeachRecording").inputSchema.properties.save.type, "boolean");
   } finally {
     await loaded.dispose();
   }
