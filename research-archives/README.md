@@ -24,3 +24,8 @@ git lfs pull
 
 `artifacts.json` is the machine-readable source, size, and digest inventory.
 These files are preservation inputs, not reconstructed build outputs.
+
+Source-only mirrors may intentionally omit the two installer payloads while
+retaining `artifacts.json`, `SHA256SUMS`, and this provenance record. Their CI
+sets `GROK_BOT_SOURCE_ONLY=1`, which skips only the physical-installer integrity
+assertion; full archival clones continue to verify both binaries byte-for-byte.
