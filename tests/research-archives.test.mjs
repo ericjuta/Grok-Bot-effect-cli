@@ -14,31 +14,45 @@ async function sha256(file) {
   return hash.digest("hex");
 }
 
-test("preserved 0.18.0 installers match the exact public release inventory", async () => {
-  const manifest = JSON.parse(await readFile(path.join(archiveRoot, "artifacts.json"), "utf8"));
-  assert.deepEqual(Object.keys(manifest).sort(), ["artifacts", "product", "schemaVersion", "version"]);
-  assert.equal(manifest.schemaVersion, 1);
-  assert.equal(manifest.product, "Grok Bot");
-  assert.equal(manifest.version, "0.18.0");
-  assert.equal(manifest.artifacts.length, 2);
+test(
+  "preserved 0.18.0 installers match the exact public release inventory",
+  {
+    skip:
+      process.env.GROK_BOT_SOURCE_ONLY === "1"
+        ? "source-only exports intentionally retain the signed inventory without installer payloads"
+        : false,
+  },
+  async () => {
+    const manifest = JSON.parse(await readFile(path.join(archiveRoot, "artifacts.json"), "utf8"));
+    assert.deepEqual(Object.keys(manifest).sort(), [
+      "artifacts",
+      "product",
+      "schemaVersion",
+      "version",
+    ]);
+    assert.equal(manifest.schemaVersion, 1);
+    assert.equal(manifest.product, "Grok Bot");
+    assert.equal(manifest.version, "0.18.0");
+    assert.equal(manifest.artifacts.length, 2);
 
-  for (const artifact of manifest.artifacts) {
-    assert.deepEqual(
-      Object.keys(artifact).sort(),
-      ["architecture", "bytes", "path", "platform", "sha256", "sourceUrl"],
-    );
-    assert.match(artifact.path, /^(macos-arm64\/[^/]+\.dmg|windows-x64\/[^/]+\.exe)$/);
-    assert.match(artifact.sha256, /^[0-9a-f]{64}$/);
-    assert.match(artifact.sourceUrl, /^https:\/\/downloads\.cursor\.com\/grokbot\/stable\//);
-    const file = path.join(archiveRoot, artifact.path);
-    assert.ok(file.startsWith(`${archiveRoot}${path.sep}`));
-    const metadata = await lstat(file);
-    assert.equal(metadata.isFile(), true);
-    assert.equal(metadata.isSymbolicLink(), false);
-    assert.equal(metadata.size, artifact.bytes, `${artifact.path} requires git lfs pull`);
-    assert.equal(await sha256(file), artifact.sha256);
-  }
-});
+    for (const artifact of manifest.artifacts) {
+      assert.deepEqual(
+        Object.keys(artifact).sort(),
+        ["architecture", "bytes", "path", "platform", "sha256", "sourceUrl"],
+      );
+      assert.match(artifact.path, /^(macos-arm64\/[^/]+\.dmg|windows-x64\/[^/]+\.exe)$/);
+      assert.match(artifact.sha256, /^[0-9a-f]{64}$/);
+      assert.match(artifact.sourceUrl, /^https:\/\/downloads\.cursor\.com\/grokbot\/stable\//);
+      const file = path.join(archiveRoot, artifact.path);
+      assert.ok(file.startsWith(`${archiveRoot}${path.sep}`));
+      const metadata = await lstat(file);
+      assert.equal(metadata.isFile(), true);
+      assert.equal(metadata.isSymbolicLink(), false);
+      assert.equal(metadata.size, artifact.bytes, `${artifact.path} requires git lfs pull`);
+      assert.equal(await sha256(file), artifact.sha256);
+    }
+  },
+);
 
 test("bootstrap prefers the hash-pinned local archive before the network", async () => {
   const [attributes, config, bootstrap] = await Promise.all([
