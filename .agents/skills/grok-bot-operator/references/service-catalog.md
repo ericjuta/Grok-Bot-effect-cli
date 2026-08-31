@@ -28,9 +28,9 @@ Risk labels are explicit catalogue policy. They are not inferred at generation t
 
 | Input schema | Count |
 | --- | ---: |
-| exact | 123 |
-| partial | 8 |
-| generic | 57 |
+| exact | 124 |
+| partial | 18 |
+| generic | 46 |
 
 | Privacy/human marker | Count |
 | --- | ---: |
@@ -156,12 +156,12 @@ The MCP minimum column names the first conservative profile above that exposes t
 | Service | CLI alias | Risk | Input | Private | Human | Runtime | MCP minimum | Purpose |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `createAgentAutomation` | `create-agent-automation` | write | partial | output | — | stock + reconstructed | writes + sensitive | Create agent automation. |
-| `deleteAgentAutomation` | `delete-agent-automation` | destructive | generic | output | — | stock + reconstructed | destructive + sensitive | Delete agent automation. |
+| `deleteAgentAutomation` | `delete-agent-automation` | destructive | partial | output | — | stock + reconstructed | destructive + sensitive | Delete agent automation. |
 | `getAgentAutomations` | `get-agent-automations` | read | exact | output | — | stock + reconstructed | sensitive | Get agent automations. |
-| `getAutomationWebhookCredential` | `get-automation-webhook-credential` | destructive | generic | output | — | stock 0.30 only | destructive + sensitive | Get automation webhook credential. |
+| `getAutomationWebhookCredential` | `get-automation-webhook-credential` | destructive | exact | output | — | stock 0.30 only | destructive + sensitive | Get automation webhook credential. |
 | `listAllAutomations` | `list-all-automations` | read | none | output | — | stock + reconstructed | sensitive | List all automations. |
-| `runAgentAutomationNow` | `run-agent-automation-now` | write | generic | — | — | stock + reconstructed | writes | Run agent automation now. |
-| `setAgentAutomationEnabled` | `set-agent-automation-enabled` | write | generic | output | — | stock + reconstructed | writes + sensitive | Set agent automation enabled. |
+| `runAgentAutomationNow` | `run-agent-automation-now` | write | partial | — | — | stock + reconstructed | writes | Run agent automation now. |
+| `setAgentAutomationEnabled` | `set-agent-automation-enabled` | write | partial | output | — | stock + reconstructed | writes + sensitive | Set agent automation enabled. |
 | `updateAgentAutomation` | `update-agent-automation` | write | partial | output | — | stock + reconstructed | writes + sensitive | Update agent automation. |
 
 ### box
@@ -350,8 +350,8 @@ The MCP minimum column names the first conservative profile above that exposes t
 | Service | CLI alias | Risk | Input | Private | Human | Runtime | MCP minimum | Purpose |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `getTeachRecordingStatus` | `get-teach-recording-status` | read | none | output | — | stock + reconstructed | sensitive | Get teach recording status. |
-| `startTeachRecording` | `start-teach-recording` | write | generic | — | — | stock + reconstructed | writes | Start teach recording. |
-| `stopTeachRecording` | `stop-teach-recording` | destructive | generic | — | — | stock + reconstructed | destructive | Stop teach recording. |
+| `startTeachRecording` | `start-teach-recording` | write | partial | — | — | stock + reconstructed | writes | Start teach recording. |
+| `stopTeachRecording` | `stop-teach-recording` | destructive | partial | — | — | stock + reconstructed | destructive | Stop teach recording. |
 
 ### template
 
@@ -389,10 +389,10 @@ The MCP minimum column names the first conservative profile above that exposes t
 | Service | CLI alias | Risk | Input | Private | Human | Runtime | MCP minimum | Purpose |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `createAgentWorkflow` | `create-agent-workflow` | write | partial | output | — | stock + reconstructed | writes + sensitive | Create agent workflow. |
-| `deleteAgentWorkflow` | `delete-agent-workflow` | destructive | generic | output | — | stock + reconstructed | destructive + sensitive | Delete agent workflow. |
+| `deleteAgentWorkflow` | `delete-agent-workflow` | destructive | partial | output | — | stock + reconstructed | destructive + sensitive | Delete agent workflow. |
 | `getAgentWorkflows` | `get-agent-workflows` | read | exact | output | — | stock + reconstructed | sensitive | Get agent workflows. |
-| `importAgentWorkflowText` | `import-agent-workflow-text` | write | generic | output | — | stock + reconstructed | writes + sensitive | Import agent workflow text. |
-| `importAgentWorkflowUrl` | `import-agent-workflow-url` | write | generic | output | — | stock + reconstructed | writes + sensitive | Import agent workflow url. |
-| `runAgentWorkflowNow` | `run-agent-workflow-now` | write | generic | — | — | stock + reconstructed | writes | Run agent workflow now. |
-| `setAgentWorkflowEnabled` | `set-agent-workflow-enabled` | write | generic | output | — | reconstructed/legacy only | writes + sensitive | Set agent workflow enabled. |
+| `importAgentWorkflowText` | `import-agent-workflow-text` | write | partial | output | — | stock + reconstructed | writes + sensitive | Import agent workflow text. |
+| `importAgentWorkflowUrl` | `import-agent-workflow-url` | write | partial | output | — | stock + reconstructed | writes + sensitive | Import agent workflow url. |
+| `runAgentWorkflowNow` | `run-agent-workflow-now` | write | partial | — | — | stock + reconstructed | writes | Run agent workflow now. |
+| `setAgentWorkflowEnabled` | `set-agent-workflow-enabled` | write | partial | output | — | reconstructed/legacy only | writes + sensitive | Set agent workflow enabled. |
 | `updateAgentWorkflow` | `update-agent-workflow` | write | partial | output | — | stock + reconstructed | writes + sensitive | Update agent workflow. |
