@@ -1,11 +1,12 @@
 name: Bootstrap source snapshot
 
 on:
-  push:
+  pull_request:
     branches:
       - main
     paths:
-      - ".github/workflows/bootstrap-source.yml"
+      - ".bootstrap/trigger.txt"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,6 +20,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Import verified source snapshot
         shell: bash
@@ -60,5 +62,3 @@ jobs:
           git add -A
           git commit -m "feat: add complete Effect TypeScript CLI"
           git push origin HEAD:main
-
-# bootstrap-trigger: 2
