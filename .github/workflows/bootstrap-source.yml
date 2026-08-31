@@ -60,3 +60,5 @@ jobs:
           git add -A
           git commit -m "feat: add complete Effect TypeScript CLI"
           git push origin HEAD:main
+
+# bootstrap-trigger: 2
