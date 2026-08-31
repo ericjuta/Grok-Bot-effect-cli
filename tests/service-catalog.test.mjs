@@ -32,6 +32,7 @@ test("service catalog preserves the exact audited 0.30 and local-extension bound
       GROK_BOT_030_ADDED_GATEWAY_METHODS,
       GROK_BOT_030_GATEWAY_METHODS,
       GROK_BOT_030_REMOVED_GATEWAY_METHODS,
+      HUMAN_DECISION_GATEWAY_METHODS,
       LOCAL_EXTENSION_GATEWAY_METHODS,
     } = loaded.module;
 
@@ -39,6 +40,11 @@ test("service catalog preserves the exact audited 0.30 and local-extension bound
     assert.equal(GROK_BOT_030_REMOVED_GATEWAY_METHODS.length, 14);
     assert.equal(LOCAL_EXTENSION_GATEWAY_METHODS.length, 27);
     assert.equal(GATEWAY_SERVICE_CATALOG.length, 188);
+    assert.equal(HUMAN_DECISION_GATEWAY_METHODS.length, 30);
+    assert.equal(
+      GATEWAY_SERVICE_CATALOG.filter((service) => service.requiresHumanDecision).length,
+      HUMAN_DECISION_GATEWAY_METHODS.length,
+    );
     assert.equal(GATEWAY_SERVICE_CATALOG.filter((service) => service.grokBot030).length, 147);
     assert.equal(GROK_BOT_030_GATEWAY_METHODS.length, 147);
     assert.deepEqual(
@@ -65,6 +71,13 @@ test("service catalog preserves the exact audited 0.30 and local-extension bound
     for (const name of LOCAL_EXTENSION_GATEWAY_METHODS) {
       assert.equal(byName.get(name)?.reconstructedHost, true, `${name} must be locally implemented`);
       assert.equal(byName.get(name)?.grokBot030, false, `${name} must remain a local extension`);
+    }
+    for (const name of HUMAN_DECISION_GATEWAY_METHODS) {
+      assert.equal(
+        byName.get(name)?.requiresHumanDecision,
+        true,
+        `${name} must remain visibly reserved for a human decision`,
+      );
     }
     for (const name of [
       "installMcpEntry",
