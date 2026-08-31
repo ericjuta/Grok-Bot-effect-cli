@@ -64,6 +64,12 @@ npm run cli:build
 See [Effect CLI and oh-my-pi integration](docs/EFFECT_CLI.md) and the
 [0.30 service coverage audit](docs/SERVICE_COVERAGE_0.30.md).
 
+oh-my-pi also discovers the project-native
+[`grok-bot-operator`](.agents/skills/grok-bot-operator/SKILL.md) skill. It
+contains daily CLI/MCP/RPC recipes plus a generated, policy-aware index of all
+188 services. Start or restart oh-my-pi from this repository root after skill
+changes; `/skill:grok-bot-operator` loads it explicitly.
+
 ## What is in the repository?
 
 The checked-in tree contains the reviewed reconstruction, tests, manifests,
@@ -106,8 +112,12 @@ or a pixel-perfect replacement for the packaged renderer.
 
 ## Preserved original installers
 
-Research copies of the exact 0.18.0 installers live under
-`research-archives/original/0.18.0/` and are stored with Git LFS:
+Full archival clones retain research copies of the exact 0.18.0 installers
+under `research-archives/original/0.18.0/` using Git LFS:
+
+This private source-only mirror intentionally omits the installer payloads
+while retaining their manifests, checksums, and provenance. A full archival
+clone fetches the Git LFS objects described below.
 
 | Platform | File | SHA-256 |
 | --- | --- | --- |
