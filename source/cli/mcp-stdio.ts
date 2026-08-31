@@ -75,39 +75,6 @@ const EXCLUDED_NAMED_MCP_SERVICES = new Set([
   "refreshMcp",
   "setHostSettings",
 ]);
-const HUMAN_DECISION_SERVICES = new Set([
-  "addMcpServer",
-  "completeMcpOAuth",
-  "connectChannel",
-  "createSharedRoom",
-  "createRoomFromAgent",
-  "createRoomInvite",
-  "disconnectChannel",
-  "dismissUserForm",
-  "dismissWidget",
-  "recordVoiceCall",
-  "reactToMessage",
-  "requestWebAuthnCeremony",
-  "resolveAutoReviewApproval",
-  "resolveLocalToolPermission",
-  "resolveVirtualCardApproval",
-  "respondToRoomJoinRequest",
-  "respondToWidget",
-  "sendDraft",
-  "setBotTemplateVisibility",
-  "submitSecret",
-  "submitUserForm",
-  "publishBotTemplate",
-  "publishSkill",
-  "unpublishSkill",
-  "voteFeedback",
-  "joinSharedRoom",
-  "addOwnAgentToSharedRoom",
-  "removeOwnAgentFromSharedRoom",
-  "leaveSharedRoom",
-  "nudgeVoiceCall",
-]);
-
 type JsonRpcId = string | number;
 type AnyFiber = Fiber.RuntimeFiber<unknown, unknown>;
 type JsonObject = Readonly<Record<string, unknown>>;
@@ -375,7 +342,7 @@ function isDestructiveService(service: GatewayServiceDescriptor): boolean {
 
 function isSafeService(service: GatewayServiceDescriptor, options: McpStdioOptions): boolean {
   if (EXCLUDED_NAMED_MCP_SERVICES.has(service.name)) return false;
-  if (HUMAN_DECISION_SERVICES.has(service.name) && options.includeHumanActions !== true) return false;
+  if (service.requiresHumanDecision && options.includeHumanActions !== true) return false;
   const destructive = isDestructiveService(service);
   if (destructive && options.includeDestructive !== true) return false;
   if (!destructive && service.risk !== "read" && options.includeWrites !== true) return false;
@@ -408,7 +375,7 @@ function serviceTool(service: GatewayServiceDescriptor, options: McpStdioOptions
   const destructive = isDestructiveService(service);
   return {
     name: service.name,
-    description: `${service.description} Grok Bot ${service.group} service; risk: ${destructive ? "destructive" : service.risk}.${service.name === "sendPrompt" && options.includeSensitive !== true ? " Host attachment paths require --include-sensitive and are forbidden in this projection." : ""}`,
+    description: `${service.description} Grok Bot ${service.group} service; risk: ${destructive ? "destructive" : service.risk}.${service.requiresHumanDecision ? " A fresh human decision is required." : ""}${service.name === "sendPrompt" && options.includeSensitive !== true ? " Host attachment paths require --include-sensitive and are forbidden in this projection." : ""}`,
     inputSchema: mcpInputSchema(service, options),
     annotations: {
       readOnlyHint: readOnly,
