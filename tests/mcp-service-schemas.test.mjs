@@ -40,8 +40,9 @@ test("MCP tools/list projects service-specific schemas and useful descriptions",
     assert.equal(byName.get("sendPrompt").inputSchema.properties.clientNonce.type, "string");
     assert.deepEqual(byName.get("sendPrompt").inputSchema.properties.source.enum, ["desktop", "mobile"]);
     assert.equal(
-      byName.get("sendPrompt").inputSchema.properties.automationWriteProvenance.const,
-      "untrusted",
+      byName.get("sendPrompt").inputSchema.properties.automationWriteProvenance,
+      undefined,
+      "do not advertise provenance metadata that the host does not enforce",
     );
     assert.equal(byName.get("sendPrompt").inputSchema.properties.directAddressedAcceptance.const, true);
     assert.deepEqual(byName.get("promptAcceptanceStatus").inputSchema.required, ["accountSlot", "clientNonce"]);

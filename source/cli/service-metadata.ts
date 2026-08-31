@@ -263,10 +263,6 @@ const EXACT_INPUT_SCHEMAS = {
       enum: ["desktop", "mobile"],
       description: "Client surface that submitted the prompt.",
     },
-    automationWriteProvenance: {
-      const: "untrusted",
-      description: "Marks automation-authored input as untrusted.",
-    },
   }, ["prompt", "agentId"]),
   promptAcceptanceStatus: closedObject("Look up idempotent prompt admission by account slot and nonce.", {
     accountSlot: nonEmptyString("Gateway account slot; normally 'host'."),
@@ -384,6 +380,10 @@ const EXACT_INPUT_SCHEMAS = {
   }, ["id", "memoryId"]),
   clearAgentMemories: agentIdInput("Delete every durable memory for one local agent."),
   getAgentAutomations: agentIdInput("List automations for one local agent."),
+  getAutomationWebhookCredential: closedObject("Read or mint the stock-host webhook credential for one automation.", {
+    id: agentId,
+    automationId: nonEmptyString("Automation ID."),
+  }, ["id", "automationId"]),
   getAgentWorkflows: agentIdInput("List workflows for one local agent."),
   getConversationOutline: agentIdInput("Read the generated conversation outline for one local agent."),
   portAgentLocalSkills: agentIdInput("Import eligible local skills into one agent."),
@@ -614,6 +614,19 @@ const PARTIAL_INPUT_SCHEMAS = {
     automationId: nonEmptyString("Automation ID."),
     spec: { type: "object", additionalProperties: true },
   }, ["id", "automationId", "spec"]),
+  setAgentAutomationEnabled: partialObject("Enable or pause one local-agent automation.", {
+    id: agentId,
+    automationId: nonEmptyString("Automation ID."),
+    isEnabled: { type: "boolean", description: "Whether the automation should be enabled." },
+  }, ["id", "automationId", "isEnabled"]),
+  runAgentAutomationNow: partialObject("Run one local-agent automation immediately.", {
+    id: agentId,
+    automationId: nonEmptyString("Automation ID."),
+  }, ["id", "automationId"]),
+  deleteAgentAutomation: partialObject("Delete one local-agent automation.", {
+    id: agentId,
+    automationId: nonEmptyString("Automation ID."),
+  }, ["id", "automationId"]),
   createAgentWorkflow: partialObject("Create a workflow for one local agent.", {
     id: agentId,
     spec: { type: "object", additionalProperties: true },
@@ -623,6 +636,37 @@ const PARTIAL_INPUT_SCHEMAS = {
     workflowId: nonEmptyString("Workflow ID."),
     spec: { type: "object", additionalProperties: true },
   }, ["id", "workflowId", "spec"]),
+  setAgentWorkflowEnabled: partialObject("Enable or pause one local-agent workflow.", {
+    id: agentId,
+    workflowId: nonEmptyString("Workflow ID."),
+    isEnabled: { type: "boolean", description: "Whether the workflow should be enabled." },
+  }, ["id", "workflowId", "isEnabled"]),
+  runAgentWorkflowNow: partialObject("Run one local-agent workflow immediately.", {
+    id: agentId,
+    workflowId: nonEmptyString("Workflow ID."),
+  }, ["id", "workflowId"]),
+  deleteAgentWorkflow: partialObject("Delete one local-agent workflow.", {
+    id: agentId,
+    workflowId: nonEmptyString("Workflow ID."),
+  }, ["id", "workflowId"]),
+  importAgentWorkflowText: partialObject("Import a workflow from pasted Markdown.", {
+    id: agentId,
+    markdown: { type: "string", description: "Markdown workflow source." },
+    name: { type: "string", description: "Optional fallback workflow name." },
+  }, ["id", "markdown"]),
+  importAgentWorkflowUrl: partialObject("Import a live workflow reference from a URL.", {
+    id: agentId,
+    url: { type: "string", description: "Workflow source URL." },
+    name: { type: "string", description: "Optional workflow name override." },
+  }, ["id", "url"]),
+  startTeachRecording: partialObject("Start a teach-mode recording for one local agent.", {
+    agentId,
+    entryPoint: { type: "string", description: "Optional recording entry-point label." },
+  }, ["agentId"]),
+  stopTeachRecording: partialObject("Stop a teach-mode recording and save or discard it.", {
+    agentId,
+    save: { type: "boolean", description: "Save the recording when true; discard it when false." },
+  }, ["agentId", "save"]),
   setHostSettings: partialObject("Patch host settings; omitted fields remain unchanged.", {
     inferenceProvider: { type: "string", description: "Inference provider identifier." },
     localToolPermission: { type: "string", enum: ["always", "ask", "never"] },

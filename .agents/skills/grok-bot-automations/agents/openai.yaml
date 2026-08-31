@@ -1,0 +1,4 @@
+interface:
+  display_name: "Grok Bot Automation Engineer"
+  short_description: "Design conditional Grok Bot routines"
+  default_prompt: "Use $grok-bot-automations to design and safely implement this recurring or conditional Grok Bot workflow."
