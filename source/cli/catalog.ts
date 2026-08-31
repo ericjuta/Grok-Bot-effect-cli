@@ -20,6 +20,7 @@ export interface GatewayServiceDescriptor {
   readonly risk: ServiceRisk;
   readonly sensitiveInput: boolean;
   readonly sensitiveOutput: boolean;
+  readonly requiresHumanDecision: boolean;
   readonly reconstructedHost: boolean;
   readonly grokBot030: boolean;
   readonly source: "host-gateway";
@@ -149,6 +150,45 @@ export const GATEWAY_EVENT_CHANNELS = [
 /** Synthetic channel emitted after an SSE reconnect. Upstream events cannot be
  * replayed, so consumers should treat it as a possible observation gap. */
 export const CLI_GATEWAY_EVENT_CHANNEL = "grok.gateway" as const;
+
+/** Actions that express a choice reserved for the human operator. This is
+ * separate from risk: a human decision can be an ordinary write, an
+ * interactive response, or a destructive mutation. Keeping the marker on the
+ * shared descriptor lets CLI/RPC consumers enforce the same boundary as MCP. */
+export const HUMAN_DECISION_GATEWAY_METHODS = [
+  "addMcpServer",
+  "completeMcpOAuth",
+  "connectChannel",
+  "createSharedRoom",
+  "createRoomFromAgent",
+  "createRoomInvite",
+  "disconnectChannel",
+  "dismissUserForm",
+  "dismissWidget",
+  "recordVoiceCall",
+  "reactToMessage",
+  "requestWebAuthnCeremony",
+  "resolveAutoReviewApproval",
+  "resolveLocalToolPermission",
+  "resolveVirtualCardApproval",
+  "respondToRoomJoinRequest",
+  "respondToWidget",
+  "sendDraft",
+  "setBotTemplateVisibility",
+  "submitSecret",
+  "submitUserForm",
+  "publishBotTemplate",
+  "publishSkill",
+  "unpublishSkill",
+  "voteFeedback",
+  "joinSharedRoom",
+  "addOwnAgentToSharedRoom",
+  "removeOwnAgentFromSharedRoom",
+  "leaveSharedRoom",
+  "nudgeVoiceCall",
+] as const;
+
+const HUMAN_DECISION_METHODS = new Set<string>(HUMAN_DECISION_GATEWAY_METHODS);
 
 const DESTRUCTIVE_PREFIXES = [
   "delete",
@@ -426,6 +466,7 @@ export const GATEWAY_SERVICE_CATALOG: readonly GatewayServiceDescriptor[] = Obje
       risk: riskForMethod(name),
       sensitiveInput: SENSITIVE_METHODS.has(name),
       sensitiveOutput: SENSITIVE_OUTPUT_METHODS.has(name),
+      requiresHumanDecision: HUMAN_DECISION_METHODS.has(name),
       reconstructedHost: isGatewayMethod(name),
       grokBot030: !GROK_BOT_030_REMOVED.has(name) && !LOCAL_EXTENSIONS.has(name),
       source: "host-gateway" as const,
