@@ -61,6 +61,33 @@ npm run cli:build
 ./dist/cli/grok-bot.mjs agent list
 ```
 
+Official remote CLI and MCP run through an isolated copy of the signed stock
+0.30 application. The packager verifies pinned source hashes, forces separate
+application and data roots, disables updating and stock protocol registration,
+removes the stock `grokbot`/`sand` URL handlers, injects only the authenticated
+loopback relay, and signs the result. It does not modify the installed stock
+application:
+
+```sh
+npm run cli:build
+npm run package:official-relay
+open "dist/Grok Bot 0.30 Official Relay.app"
+```
+
+On first launch, use the native **Move to Applications** action and sign in. A
+clean official connection publishes mode-`0600` discovery for the relay on
+`127.0.0.1:18765`; quitting the app removes discovery and closes the relay. The
+checked-in `.omp/mcp.json` starts `.omp/grok-bot-official.sh` read-only. The
+launcher removes direct official-gateway environment credentials and inherited
+discovery overrides so the CLI cannot bypass the isolated relay. Reload and
+test MCP from this repository root.
+
+The reconstructed 0.18 client itself remains unsupported by the official
+backend: do not spoof its version or scrape the stock app's encrypted
+descriptor. Local Docker remains available through `.omp/grok-bot-local.mjs`.
+Unsafe MCP exposure remains an explicit per-user choice through
+`.omp/mcp.unsafe.example.json`.
+
 See [Effect CLI and oh-my-pi integration](docs/EFFECT_CLI.md) and the
 [0.30 service coverage audit](docs/SERVICE_COVERAGE_0.30.md).
 
@@ -170,7 +197,11 @@ The container:
 - is stopped or replaced through the same settings lifecycle.
 
 Docker Desktop, or another compatible local Docker daemon, must be running.
-Remote mode remains the default.
+Remote mode remains the default. The local Docker host is the loopback
+sandbox the tracked local launcher can authenticate. Official remote runs
+through the separately packaged 0.30 relay application above; the stock app
+remains unmodified, and its encrypted remote gateway descriptor must not be
+scraped or decrypted.
 
 ## Requirements
 

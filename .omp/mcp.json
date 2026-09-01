@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json",
+  "mcpServers": {
+    "grok-bot": {
+      "type": "stdio",
+      "command": ".omp/grok-bot-official.sh",
+      "args": [
+        "mcp",
+        "--stdio"
+      ],
+      "requestIdFormat": "string",
+      "timeout": 120000
+    }
+  }
+}

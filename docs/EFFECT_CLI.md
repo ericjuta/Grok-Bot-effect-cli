@@ -73,6 +73,60 @@ HTTP is accepted on loopback only; a non-loopback HTTP URL requires the
 conspicuous `--allow-insecure-remote` override. HTTPS is expected for a remote
 gateway.
 
+Local-exec daemon files under any data root are the wrong audience. Do not
+reuse them as gateway tokens. The stock desktop app's official remote
+`gateway-descriptor.json` is encrypted and must not be scraped or decrypted.
+
+The reconstructed 0.18 client is not a supported official client. The official
+backend rejects it, and this tree does not spoof `SAND_CLIENT_APP_VERSION` or
+reuse a cached descriptor to bypass that check. Official CLI and MCP instead
+run through the separately packaged **Grok Bot 0.30 Official Relay** application.
+The packager starts from the installed signed stock 0.30 application, verifies
+pinned application, executable, ASAR, and main-bundle hashes, forces separate
+application and data roots, injects the reviewed loopback relay, disables
+updating and stock protocol registration, removes the `grokbot`/`sand` URL
+handlers, and signs the result. It does not modify the installed stock
+application.
+
+The relay listens only on `127.0.0.1:18765`, requires its own random bearer
+token, and forwards through the supported stock connector with both official
+credentials in memory. It publishes mode-`0600` discovery only after the stock
+connector succeeds. A listening relay without discovery is not proof of
+official access. Graceful quit removes discovery and closes the child relay;
+the child also exits when its parent process crashes.
+
+The tracked `.omp/grok-bot-official.sh` launcher strips direct
+`GROK_BOT_GATEWAY_*` and `SAND_HOST_GATEWAY_*` credentials plus the
+`GROK_BOT_GATEWAY_DISCOVERY` override before starting the CLI, so inherited
+environment state cannot bypass relay discovery. Do not put secrets in argv,
+repository files, examples, logs, or transcripts.
+
+## Official relay and local Docker setup
+
+The shortest official flow is:
+
+1. Install the signed stock Grok Bot 0.30 application and sign in.
+2. Build the CLI and isolated relay copy with `npm run cli:build` and
+   `npm run package:official-relay`.
+3. Open `dist/Grok Bot 0.30 Official Relay.app`, use the native **Move to
+   Applications** action, and sign in inside the isolated copy. It deliberately
+   leaves the stock app as the sole owner of `grokbot`/`sand` deep links.
+4. Wait for `.omp/grok-bot-official.sh doctor` to report
+   `source: "official-remote-relay"` and authenticated discovery.
+5. Reload and test MCP from this repository root. The checked-in
+   `.omp/mcp.json` starts the official launcher read-only.
+
+The local Docker alternative remains available when Docker is running: package
+the reconstructed app, sign in, enable **Settings → Router → Use local Docker
+VM**, initialize a bot, and use `.omp/grok-bot-local.mjs`. That launcher reads
+the app-owned mode-`0600` `local-docker-vm.json` credential.
+
+Machine-local oh-my-pi connection files must stay untracked and must not embed
+secrets. Shared project MCP exposure stays conservative and read-only. Unsafe
+MCP flags remain an explicit per-user choice through
+`.omp/mcp.unsafe.example.json`; do not add write, destructive, sensitive,
+human-action, or raw flags to the shared project file.
+
 ## One-shot commands
 
 After command-line parsing succeeds, a one-shot command writes one terminal
@@ -194,8 +248,9 @@ public 0.30 build, including `transcript`, `agents`, `agent-upserted`,
 ## oh-my-pi through MCP
 
 oh-my-pi natively discovers project MCP configuration at `.omp/mcp.json` and
-user configuration at `~/.omp/agent/mcp.json`. After `npm link`, a project
-configuration can be:
+user configuration at `~/.omp/agent/mcp.json`. The checked-in project file
+starts the official relay launcher read-only, with no extra exposure flags.
+After `npm link`, an equivalent portable configuration is:
 
 ```json
 {
@@ -277,9 +332,11 @@ among the operations that additionally require `--unsafe-human-actions` and
 therefore all three `--include-*` flags.
 
 Do not put exposure flags in a shared project config unless every user and the
-target gateway are trusted. oh-my-pi can abort some stdio MCP calls locally
-without sending cancellation to the server. EOF and process interruption still
-cancel this server's scoped client fibers. NDJSON RPC additionally exposes
+target gateway are trusted. Copy `.omp/mcp.unsafe.example.json` into an
+untracked user or profile config instead of changing `.omp/mcp.json`. oh-my-pi
+can abort some stdio MCP calls locally without sending cancellation to the
+server. EOF and process interruption still cancel this server's scoped client
+fibers. NDJSON RPC additionally exposes
 per-request client-transport cancellation, but a host operation stops only if
 that implementation cooperates with abort; cancellation never proves that
 remote work or a mutation was rolled back.

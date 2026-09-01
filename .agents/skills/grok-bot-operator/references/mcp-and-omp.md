@@ -10,7 +10,11 @@ oh-my-pi discovers project skills from `.agents/skills` at startup. Launch it
 from this repository root, restart after changing the skill, and invoke
 `/skill:grok-bot-operator` explicitly when you want its full instructions loaded.
 
-Put the project MCP configuration in `.omp/mcp.json`:
+The checked-in `.omp/mcp.json` is the shared official relay default and stays
+read-only. Its launcher clears inherited direct and discovery routes before the
+CLI starts. Copy `.omp/mcp.unsafe.example.json` into `~/.omp/agent/mcp.json` or
+another untracked profile when you need that variant. An equivalent portable
+project configuration is:
 
 ```json
 {
