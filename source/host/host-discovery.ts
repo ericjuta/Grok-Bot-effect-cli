@@ -11,6 +11,7 @@ export interface GatewayDiscoveryInfo {
   readonly scheme?: "http" | "https";
   readonly host?: string;
   readonly token?: string;
+  readonly target?: string;
 }
 
 export function isGatewayDiscoveryInfo(value: unknown): value is GatewayDiscoveryInfo {
@@ -25,7 +26,8 @@ export function isGatewayDiscoveryInfo(value: unknown): value is GatewayDiscover
     && typeof candidate.startedAt === "number"
     && (candidate.scheme === undefined || candidate.scheme === "http" || candidate.scheme === "https")
     && (candidate.host === undefined || typeof candidate.host === "string")
-    && (candidate.token === undefined || typeof candidate.token === "string");
+    && (candidate.token === undefined || typeof candidate.token === "string")
+    && (candidate.target === undefined || typeof candidate.target === "string");
 }
 
 export async function writeGatewayDiscovery(info: GatewayDiscoveryInfo, path?: string): Promise<void> {

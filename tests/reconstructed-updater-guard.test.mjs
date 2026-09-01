@@ -19,6 +19,7 @@ test("reconstructed fallback and clean packaging share one idempotent service gu
   assert.match(guarded, /SAND_DISABLE_UPDATES \?\?= "1"/);
   assert.match(guarded, /SAND_DISABLE_SENTRY \?\?= "1"/);
   assert.match(guarded, /SAND_DISABLE_TELEMETRY \?\?= "1"/);
+  assert.doesNotMatch(guarded, /SAND_CLIENT_APP_VERSION/);
 
   const fallbackFixture = [
     "var isSandLabBuild2 = appPackageJson.sandLab === true;",
@@ -28,4 +29,11 @@ test("reconstructed fallback and clean packaging share one idempotent service gu
 
   const cleanBuildSource = await readFile(path.join(root, "scripts", "clean-build.mjs"), "utf8");
   assert.match(cleanBuildSource, /fidelityRuntimeComposition, \{ reconstructedPackage: true \}/);
+
+  const mainSource = await readFile(path.join(root, "source", "electron-main", "main.ts"), "utf8");
+  assert.match(
+    mainSource,
+    /if \(input\.appVersion != null\) input\.env\.SAND_CLIENT_APP_VERSION = input\.appVersion;/,
+  );
+  assert.doesNotMatch(mainSource, /SAND_CLIENT_APP_VERSION \?\?= input\.appVersion/);
 });
