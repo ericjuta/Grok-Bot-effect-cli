@@ -140,14 +140,28 @@ test("official CLI relay escalates to SIGKILL when the child ignores SIGTERM", a
     "--eval",
     "process.on('SIGTERM', () => {}); process.send?.({ type: 'armed' }); setInterval(() => {}, 1_000);",
   ], { stdio: ["ignore", "ignore", "ignore", "ipc"] });
-  await new Promise((resolve) => child.once("message", resolve));
-  const supervisor = loaded.module.superviseOfficialCliRelayChild(child, 50);
+  let supervisor;
   try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("child never armed its SIGTERM handler")), 5_000);
+      const settle = (handler) => (...args) => {
+        clearTimeout(timer);
+        handler(...args);
+      };
+      child.once("message", settle((message) => {
+        if (message?.type === "armed") resolve();
+        else reject(new Error(`unexpected child message ${JSON.stringify(message)}`));
+      }));
+      child.once("error", settle(reject));
+      child.once("exit", settle((code, signal) => reject(new Error(`child exited before arming (${code ?? signal})`))));
+    });
+    supervisor = loaded.module.superviseOfficialCliRelayChild(child, 50);
     await assert.rejects(supervisor.listening, /did not report listening within 50ms/);
     await supervisor.exited;
     assert.equal(child.signalCode, "SIGKILL");
   } finally {
-    await supervisor.stop();
+    if (supervisor != null) await supervisor.stop();
+    else if (child.exitCode == null && child.signalCode == null) child.kill("SIGKILL");
     await loaded.dispose();
   }
 });
