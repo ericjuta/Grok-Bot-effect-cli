@@ -99,6 +99,114 @@ async function waitForPortToClose(port) {
   throw new Error(`Relay port ${port} remained open after its parent exited`);
 }
 
+test("official CLI relay startup resolves only after valid listening IPC", async () => {
+  const loaded = await loadModule();
+  const child = spawn(process.execPath, [
+    "--eval",
+    "setTimeout(() => process.send?.({ type: 'listening', port: 43210 }), 1_100); setInterval(() => {}, 1_000);",
+  ], { stdio: ["ignore", "ignore", "ignore", "ipc"] });
+  const supervisor = loaded.module.superviseOfficialCliRelayChild(child, 2_000);
+  const startedAt = Date.now();
+  try {
+    assert.equal(await supervisor.listening, 43_210);
+    assert.ok(Date.now() - startedAt >= 1_000, "startup resolved before the child acknowledged listening");
+  } finally {
+    await supervisor.stop();
+    await supervisor.exited;
+    await loaded.dispose();
+  }
+});
+
+test("official CLI relay startup rejects timeout and stops the child", async () => {
+  const loaded = await loadModule();
+  const child = spawn(process.execPath, ["--eval", "setInterval(() => {}, 1_000);"], {
+    stdio: ["ignore", "ignore", "ignore", "ipc"],
+  });
+  const supervisor = loaded.module.superviseOfficialCliRelayChild(child, 50);
+  try {
+    await assert.rejects(supervisor.listening, /did not report listening within 50ms/);
+    await supervisor.exited;
+    assert.equal(child.signalCode, "SIGTERM");
+  } finally {
+    await supervisor.stop();
+    await loaded.dispose();
+  }
+});
+
+test("official CLI relay startup rejects child errors and pre-listen exits", async (t) => {
+  const loaded = await loadModule();
+  try {
+    await t.test("reported listen error", async () => {
+      const child = spawn(process.execPath, [
+        "--eval",
+        "process.send?.({ type: 'error', error: 'simulated listen failure' }); setInterval(() => {}, 1_000);",
+      ], { stdio: ["ignore", "ignore", "ignore", "ipc"] });
+      const supervisor = loaded.module.superviseOfficialCliRelayChild(child, 1_000);
+      try {
+        await assert.rejects(supervisor.listening, /simulated listen failure/);
+        await supervisor.exited;
+        assert.equal(child.signalCode, "SIGTERM");
+      } finally {
+        await supervisor.stop();
+      }
+    });
+
+    await t.test("pre-listen exit", async () => {
+      const child = spawn(process.execPath, ["--eval", "process.exit(23);"], {
+        stdio: ["ignore", "ignore", "ignore", "ipc"],
+      });
+      const supervisor = loaded.module.superviseOfficialCliRelayChild(child, 1_000);
+      try {
+        await assert.rejects(supervisor.listening, /exited before listening \(code 23\)/);
+        await supervisor.exited;
+        assert.equal(child.exitCode, 23);
+      } finally {
+        await supervisor.stop();
+      }
+    });
+
+    await t.test("malformed listening acknowledgement", async () => {
+      const child = spawn(process.execPath, [
+        "--eval",
+        "process.send?.({ type: 'listening', port: 0 }); setInterval(() => {}, 1_000);",
+      ], { stdio: ["ignore", "ignore", "ignore", "ipc"] });
+      const supervisor = loaded.module.superviseOfficialCliRelayChild(child, 1_000);
+      try {
+        await assert.rejects(supervisor.listening, /invalid listening port/);
+        await supervisor.exited;
+        assert.equal(child.signalCode, "SIGTERM");
+      } finally {
+        await supervisor.stop();
+      }
+    });
+  } finally {
+    await loaded.dispose();
+  }
+});
+
+test("official CLI relay does not publish discovery when the child cannot listen", async () => {
+  const loaded = await loadModule();
+  const temporary = await mkdtemp(path.join(os.tmpdir(), "grok-cli-relay-startup-failure-"));
+  const discoveryPath = path.join(temporary, "gateway.json");
+  try {
+    await assert.rejects(loaded.module.startOfficialCliLoopbackRelay({
+      discoveryPath,
+      host: "192.0.2.1",
+      port: 0,
+      resolveConnection: async () => ({
+        baseUrl: "https://example.invalid",
+        token: officialBearer,
+      }),
+    }), /EADDRNOTAVAIL|failed to listen/);
+    await assert.rejects(stat(discoveryPath), { code: "ENOENT" });
+  } finally {
+    await Promise.all([
+      loaded.dispose(),
+      rm(temporary, { recursive: true, force: true }),
+    ]);
+  }
+});
+
 test("official CLI relay publishes only its own discovery token and forwards official credentials", async () => {
   const loaded = await loadModule();
   const temporary = await mkdtemp(path.join(os.tmpdir(), "grok-cli-relay-"));

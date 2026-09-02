@@ -3,6 +3,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { chmodSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
+import { setTimeout as wait } from "node:timers/promises";
 
 import { clearGatewayDiscovery, writeGatewayDiscovery } from "../../host/host-discovery.js";
 import { getGatewayDiscoveryPath, getSandProductionRootDir } from "../../host/host-paths.js";
@@ -11,6 +12,7 @@ import type { GatewayConnection } from "./gateway-descriptor-cache.js";
 export const OFFICIAL_CLI_RELAY_TARGET = "official-remote-relay";
 export const OFFICIAL_CLI_RELAY_PORT = 18_765;
 export const OFFICIAL_CLI_RELAY_RESOLVE_TIMEOUT_MS = 8_000;
+export const OFFICIAL_CLI_RELAY_START_TIMEOUT_MS = 5_000;
 
 export interface OfficialCliLoopbackRelayOptions {
   readonly resolveConnection: () => Promise<GatewayConnection>;
@@ -229,6 +231,107 @@ server.on("error", (error) => {
 server.listen(port, host, () => announce(server.address().port));
 `;
 
+export interface OfficialCliRelayChildSupervisor {
+  readonly listening: Promise<number>;
+  readonly exited: Promise<void>;
+  stop(): Promise<void>;
+}
+
+export function superviseOfficialCliRelayChild(
+  child: ChildProcess,
+  startupTimeoutMs = OFFICIAL_CLI_RELAY_START_TIMEOUT_MS,
+): OfficialCliRelayChildSupervisor {
+  if (!Number.isFinite(startupTimeoutMs) || startupTimeoutMs <= 0) {
+    throw new RangeError("Official CLI relay startup timeout must be positive and finite.");
+  }
+
+  const { promise: exited, resolve: resolveExited } = Promise.withResolvers<void>();
+  let exitSettled = false;
+  const finishExit = (): void => {
+    if (exitSettled) return;
+    exitSettled = true;
+    child.off("exit", finishExit);
+    child.off("close", finishExit);
+    resolveExited();
+  };
+  child.once("exit", finishExit);
+  child.once("close", finishExit);
+  if (child.exitCode != null || child.signalCode != null) queueMicrotask(finishExit);
+
+  let stopPromise: Promise<void> | undefined;
+  const stop = (): Promise<void> => {
+    if (stopPromise != null) return stopPromise;
+    stopPromise = (async () => {
+      if (child.pid == null || child.exitCode != null || child.signalCode != null) return;
+      try { child.kill("SIGTERM"); } catch {}
+      const stoppedGracefully = await Promise.race([
+        exited.then(() => true),
+        wait(1_000, false, { ref: false }),
+      ]);
+      if (stoppedGracefully || child.exitCode != null || child.signalCode != null) return;
+      try { child.kill("SIGKILL"); } catch {}
+      await Promise.race([exited, wait(1_000, undefined, { ref: false })]);
+    })();
+    return stopPromise;
+  };
+
+  const {
+    promise: listening,
+    resolve: resolveListening,
+    reject: rejectListening,
+  } = Promise.withResolvers<number>();
+  let startupSettled = false;
+  let startupTimer: NodeJS.Timeout | undefined;
+  const cleanupStartup = (): void => {
+    clearTimeout(startupTimer);
+    child.off("message", onMessage);
+    child.off("exit", onExit);
+  };
+  const failStartup = (error: Error): void => {
+    if (startupSettled) return;
+    startupSettled = true;
+    cleanupStartup();
+    void stop().then(() => rejectListening(error), () => rejectListening(error));
+  };
+  const onMessage = (message: unknown): void => {
+    if (typeof message !== "object" || message == null) return;
+    const type = Reflect.get(message, "type");
+    if (type === "error") {
+      const detail = Reflect.get(message, "error");
+      failStartup(new Error(typeof detail === "string" && detail.length > 0 ? detail : "Official CLI relay failed to listen."));
+      return;
+    }
+    if (type !== "listening") return;
+    const boundPort = Reflect.get(message, "port");
+    if (typeof boundPort !== "number" || !Number.isInteger(boundPort) || boundPort <= 0 || boundPort > 65_535) {
+      failStartup(new Error("Official CLI relay returned an invalid listening port."));
+      return;
+    }
+    if (startupSettled) return;
+    startupSettled = true;
+    cleanupStartup();
+    resolveListening(boundPort);
+  };
+  const onExit = (code: number | null, signal: NodeJS.Signals | null): void => {
+    const detail = code != null ? `code ${code}` : signal != null ? `signal ${signal}` : "unknown status";
+    failStartup(new Error(`Official CLI relay child exited before listening (${detail}).`));
+  };
+  const onError = (error: Error): void => {
+    failStartup(new Error(`Official CLI relay child failed before listening: ${error.message}`));
+  };
+
+  child.on("message", onMessage);
+  child.once("exit", onExit);
+  child.on("error", onError);
+  void exited.then(() => child.off("error", onError));
+  startupTimer = setTimeout(() => {
+    failStartup(new Error(`Official CLI relay child did not report listening within ${startupTimeoutMs}ms.`));
+  }, startupTimeoutMs);
+  if (child.exitCode != null || child.signalCode != null) queueMicrotask(() => onExit(child.exitCode, child.signalCode));
+
+  return { listening, exited, stop };
+}
+
 export async function startOfficialCliLoopbackRelay(
   options: OfficialCliLoopbackRelayOptions,
 ): Promise<OfficialCliLoopbackRelay> {
@@ -257,21 +360,8 @@ export async function startOfficialCliLoopbackRelay(
     },
     stdio: ["ignore", "inherit", "inherit", "ipc"],
   });
-  const childExited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
-  const listening = new Promise<number>((resolve, reject) => {
-    const timer = setTimeout(() => resolve(port), 1_000);
-    child.once("message", (message: { readonly type?: string; readonly port?: number; readonly error?: string }) => {
-      if (message.type === "listening") {
-        clearTimeout(timer);
-        resolve(typeof message.port === "number" && message.port > 0 ? message.port : port);
-        return;
-      }
-      if (message.type === "error") {
-        clearTimeout(timer);
-        reject(new Error(message.error ?? "official CLI relay failed to listen"));
-      }
-    });
-  });
+  const supervisor = superviseOfficialCliRelayChild(child);
+  const boundPort = await supervisor.listening;
   child.on("message", (message: { readonly type?: string; readonly id?: number; readonly error?: string }) => {
     if (message.type !== "resolve") return;
     void options.resolveConnection().then(
@@ -283,7 +373,6 @@ export async function startOfficialCliLoopbackRelay(
     );
   });
 
-  const boundPort = await listening;
   const discovery = {
     port: boundPort,
     pid,
@@ -304,11 +393,7 @@ export async function startOfficialCliLoopbackRelay(
   const dispose = (): Promise<void> => {
     if (disposePromise != null) return disposePromise;
     disposePromise = (async () => {
-      child.kill("SIGTERM");
-      await Promise.race([
-        childExited,
-        new Promise<void>((resolve) => setTimeout(resolve, 1_000)),
-      ]);
+      await supervisor.stop();
       try {
         const stored = JSON.parse(await readFile(discoveryPath, "utf8")) as unknown;
         if (discoveryOwnsRelay(stored, { pid, port: boundPort, startedAt })) {
