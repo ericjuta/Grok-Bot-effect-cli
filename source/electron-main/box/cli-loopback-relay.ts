@@ -271,6 +271,9 @@ export function superviseOfficialCliRelayChild(
       if (stoppedGracefully || child.exitCode != null || child.signalCode != null) return;
       try { child.kill("SIGKILL"); } catch {}
       await Promise.race([exited, wait(1_000, undefined, { ref: false })]);
+      if (!exitSettled && child.exitCode == null && child.signalCode == null) {
+        throw new Error(`Official CLI relay child survived SIGKILL (pid ${child.pid}).`);
+      }
     })();
     return stopPromise;
   };
@@ -291,7 +294,10 @@ export function superviseOfficialCliRelayChild(
     if (startupSettled) return;
     startupSettled = true;
     cleanupStartup();
-    void stop().then(() => rejectListening(error), () => rejectListening(error));
+    void stop().then(
+      () => rejectListening(error),
+      (stopError: unknown) => rejectListening(new Error(`${error.message} ${stopError instanceof Error ? stopError.message : String(stopError)}`)),
+    );
   };
   const onMessage = (message: unknown): void => {
     if (typeof message !== "object" || message == null) return;
@@ -393,7 +399,12 @@ export async function startOfficialCliLoopbackRelay(
   const dispose = (): Promise<void> => {
     if (disposePromise != null) return disposePromise;
     disposePromise = (async () => {
-      await supervisor.stop();
+      let stopError: unknown;
+      try {
+        await supervisor.stop();
+      } catch (error) {
+        stopError = error;
+      }
       try {
         const stored = JSON.parse(await readFile(discoveryPath, "utf8")) as unknown;
         if (discoveryOwnsRelay(stored, { pid, port: boundPort, startedAt })) {
@@ -408,6 +419,7 @@ export async function startOfficialCliLoopbackRelay(
           } catch {}
         }
       } catch {}
+      if (stopError !== undefined) throw stopError;
     })();
     return disposePromise;
   };

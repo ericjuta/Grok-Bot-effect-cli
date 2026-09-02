@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { createServer, request as httpRequest } from "node:http";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
@@ -129,6 +130,50 @@ test("official CLI relay startup rejects timeout and stops the child", async () 
     assert.equal(child.signalCode, "SIGTERM");
   } finally {
     await supervisor.stop();
+    await loaded.dispose();
+  }
+});
+
+test("official CLI relay escalates to SIGKILL when the child ignores SIGTERM", async () => {
+  const loaded = await loadModule();
+  const child = spawn(process.execPath, [
+    "--eval",
+    "process.on('SIGTERM', () => {}); process.send?.({ type: 'armed' }); setInterval(() => {}, 1_000);",
+  ], { stdio: ["ignore", "ignore", "ignore", "ipc"] });
+  await new Promise((resolve) => child.once("message", resolve));
+  const supervisor = loaded.module.superviseOfficialCliRelayChild(child, 50);
+  try {
+    await assert.rejects(supervisor.listening, /did not report listening within 50ms/);
+    await supervisor.exited;
+    assert.equal(child.signalCode, "SIGKILL");
+  } finally {
+    await supervisor.stop();
+    await loaded.dispose();
+  }
+});
+
+test("official CLI relay reports a child that survives SIGKILL", async () => {
+  const loaded = await loadModule();
+  const kills = [];
+  const child = Object.assign(new EventEmitter(), {
+    pid: 4242,
+    exitCode: null,
+    signalCode: null,
+    connected: false,
+    kill(signal) {
+      kills.push(signal);
+      return true;
+    },
+  });
+  const supervisor = loaded.module.superviseOfficialCliRelayChild(child, 50);
+  try {
+    await assert.rejects(
+      supervisor.listening,
+      /did not report listening within 50ms\. Official CLI relay child survived SIGKILL \(pid 4242\)\./,
+    );
+    assert.deepEqual(kills, ["SIGTERM", "SIGKILL"]);
+    await assert.rejects(supervisor.stop(), /survived SIGKILL \(pid 4242\)/);
+  } finally {
     await loaded.dispose();
   }
 });
