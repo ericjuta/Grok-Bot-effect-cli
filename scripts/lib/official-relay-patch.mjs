@@ -18,7 +18,7 @@ export const officialRelayUpdaterGuard = [
 ].join("\n");
 
 export const officialRelayConnectorAnchor = "xe=I.wrap(ue.guard(We));S=$vn({connector:xe,";
-export const officialRelayConnectorReplacement = "xe=require(\"./official-cli-relay.cjs\").wrapRemoteHostConnectorWithOfficialCliRelay(I.wrap(ue.guard(We)),{registerShutdown:dispose=>{let relayDisposing=!1;Te.app.on(\"before-quit\",event=>{if(relayDisposing)return;relayDisposing=!0;event.preventDefault();void dispose().finally(()=>Te.app.quit())})}});S=$vn({connector:xe,";
+export const officialRelayConnectorReplacement = "xe=require(\"./official-cli-relay.cjs\").wrapRemoteHostConnectorWithOfficialCliRelay(I.wrap(ue.guard(We)),{registerShutdown:dispose=>{let relayDisposing=!1;Te.app.on(\"before-quit\",event=>{if(relayDisposing)return;relayDisposing=!0;event.preventDefault();void dispose().catch(error=>console.error(\"[sand] official CLI relay shutdown failed: \"+(error instanceof Error?error.message:String(error)))).finally(()=>Te.app.quit())})}});S=$vn({connector:xe,";
 export const officialRelayProtocolRegistrationAnchor = "registerProtocolClient:Te.app.isPackaged&&!aye";
 export const officialRelayProtocolRegistrationReplacement = "registerProtocolClient:!1";
 
