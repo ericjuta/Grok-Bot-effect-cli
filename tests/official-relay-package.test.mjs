@@ -99,7 +99,8 @@ test("only the isolated 0.30 package owns the official CLI relay", async () => {
   assert.match(relayPackager, /\["-remove", "CFBundleURLTypes", outputInfoPlist\]/);
   assert.match(relayPackager, /outputInfo\.includes\("CFBundleURLTypes"\)/);
 });
-test("official launcher strips inherited direct and discovery routes", async () => {
+
+test("official launcher pins relay discovery and rejects direct route overrides", async () => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), "grok-official-launcher-"));
   const fakeNodeDirectory = path.join(
     temporary,
@@ -125,25 +126,52 @@ printf '%s\\n' \\
   "$1" "$2" "$3"
 `);
   await chmod(fakeNode, 0o755);
+  const launcher = path.join(repoRoot, ".omp", "grok-bot-official.sh");
+  const environment = {
+    ...process.env,
+    HOME: temporary,
+    GROK_BOT_GATEWAY_URL: "http://hostile.invalid",
+    GROK_BOT_GATEWAY_TOKEN: "hostile",
+    GROK_BOT_GATEWAY_NETWORK_TOKEN: "hostile",
+    GROK_BOT_GATEWAY_DISCOVERY: "/tmp/hostile-discovery.json",
+    SAND_HOST_GATEWAY_URL: "http://hostile.invalid",
+    SAND_HOST_GATEWAY_TOKEN: "hostile",
+    SAND_HOST_GATEWAY_NETWORK_TOKEN: "hostile",
+  };
+  const executionOptions = {
+    encoding: "utf8",
+    env: environment,
+    stdio: ["ignore", "pipe", "pipe"],
+  };
   try {
-    const stdout = execFileSync(path.join(repoRoot, ".omp", "grok-bot-official.sh"), ["mcp", "--stdio"], {
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        HOME: temporary,
-        GROK_BOT_GATEWAY_URL: "http://hostile.invalid",
-        GROK_BOT_GATEWAY_TOKEN: "hostile",
-        GROK_BOT_GATEWAY_NETWORK_TOKEN: "hostile",
-        GROK_BOT_GATEWAY_DISCOVERY: "/tmp/hostile-discovery.json",
-        SAND_HOST_GATEWAY_URL: "http://hostile.invalid",
-        SAND_HOST_GATEWAY_TOKEN: "hostile",
-        SAND_HOST_GATEWAY_NETWORK_TOKEN: "hostile",
-      },
-    });
+    const stdout = execFileSync(launcher, ["mcp", "--stdio"], executionOptions);
     const lines = stdout.trimEnd().split("\n");
-    assert.deepEqual(lines.slice(0, 7), Array(7).fill("<unset>"));
+    assert.deepEqual(lines.slice(0, 3), Array(3).fill("<unset>"));
+    assert.equal(lines[3], path.join(temporary, ".grokbot-official-relay", "gateway.json"));
+    assert.deepEqual(lines.slice(4, 7), Array(3).fill("<unset>"));
     assert.equal(lines[7], path.join(repoRoot, "dist", "cli", "grok-bot.mjs"));
     assert.deepEqual(lines.slice(8), ["mcp", "--stdio"]);
+
+    const forbiddenArguments = [
+      ["--url", "http://hostile.invalid", "doctor"],
+      ["--url=http://hostile.invalid", "doctor"],
+      ["--token", "secret", "doctor"],
+      ["doctor", "--token=secret"],
+      ["--discovery", "/tmp/hostile-discovery.json", "doctor"],
+      ["--discovery=/tmp/hostile-discovery.json", "doctor"],
+    ];
+    for (const arguments_ of forbiddenArguments) {
+      assert.throws(
+        () => execFileSync(launcher, arguments_, executionOptions),
+        (error) => {
+          assert.equal(error.status, 2);
+          assert.equal(error.stdout, "");
+          assert.match(error.stderr, /does not allow gateway route overrides/);
+          assert.doesNotMatch(error.stderr, /secret|hostile\.invalid|hostile-discovery/);
+          return true;
+        },
+      );
+    }
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

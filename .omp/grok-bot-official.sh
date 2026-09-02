@@ -4,6 +4,15 @@ set -eu
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 pinned_version=$(cat "$repo_root/.node-version")
 node_path=
+for argument in "$@"
+do
+  case "$argument" in
+    --url|--url=*|--token|--token=*|--discovery|--discovery=*)
+      printf 'The official relay launcher does not allow gateway route overrides.\n' >&2
+      exit 2
+      ;;
+  esac
+done
 
 for candidate in \
   "$HOME/.local/share/fnm/node-versions/v$pinned_version/installation/bin/node" \
@@ -25,7 +34,7 @@ fi
 unset GROK_BOT_GATEWAY_URL
 unset GROK_BOT_GATEWAY_TOKEN
 unset GROK_BOT_GATEWAY_NETWORK_TOKEN
-unset GROK_BOT_GATEWAY_DISCOVERY
+export GROK_BOT_GATEWAY_DISCOVERY="$HOME/.grokbot-official-relay/gateway.json"
 unset SAND_HOST_GATEWAY_URL
 unset SAND_HOST_GATEWAY_TOKEN
 unset SAND_HOST_GATEWAY_NETWORK_TOKEN

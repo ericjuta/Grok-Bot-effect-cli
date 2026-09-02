@@ -78,8 +78,9 @@ On first launch, use the native **Move to Applications** action and sign in. A
 clean official connection publishes mode-`0600` discovery for the relay on
 `127.0.0.1:18765`; quitting the app removes discovery and closes the relay. The
 checked-in `.omp/mcp.json` starts `.omp/grok-bot-official.sh` read-only. The
-launcher removes direct official-gateway environment credentials and inherited
-discovery overrides so the CLI cannot bypass the isolated relay. Reload and
+launcher removes direct official-gateway credentials, pins discovery to
+`~/.grokbot-official-relay/gateway.json`, and rejects `--url`, `--token`, and
+`--discovery` overrides so the CLI cannot bypass the isolated relay. Reload and
 test MCP from this repository root.
 
 The reconstructed 0.18 client itself remains unsupported by the official

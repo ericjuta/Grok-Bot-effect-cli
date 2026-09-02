@@ -96,10 +96,13 @@ official access. Graceful quit removes discovery and closes the child relay;
 the child also exits when its parent process crashes.
 
 The tracked `.omp/grok-bot-official.sh` launcher strips direct
-`GROK_BOT_GATEWAY_*` and `SAND_HOST_GATEWAY_*` credentials plus the
-`GROK_BOT_GATEWAY_DISCOVERY` override before starting the CLI, so inherited
-environment state cannot bypass relay discovery. Do not put secrets in argv,
-repository files, examples, logs, or transcripts.
+`GROK_BOT_GATEWAY_*` and `SAND_HOST_GATEWAY_*` credentials, replaces inherited
+discovery with the exact `~/.grokbot-official-relay/gateway.json` relay path,
+and rejects `--url`, `--token`, and `--discovery` arguments (including
+`--name=value`
+forms). Neither environment state nor command arguments can bypass the isolated
+relay. Do not put secrets in argv, repository files, examples, logs, or
+transcripts.
 
 ## Official relay and local Docker setup
 
